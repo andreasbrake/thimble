@@ -11,9 +11,12 @@
   "rules": {
     "quotemark": [true, "single"],
     "indent": [true, "spaces", 2],
+    "space-before-function-paren": [true, "always"],
     "interface-name": false,
     "ordered-imports": false,
     "object-literal-sort-keys": false,
-    "no-consecutive-blank-lines": false
+    "no-consecutive-blank-lines": false,
+    "no-console": [false],
+    "max-classes-per-file":false
   }
 }
