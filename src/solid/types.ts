@@ -4,6 +4,7 @@ const RDF = $rdf.Namespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#');
 const RDFS = $rdf.Namespace('http://www.w3.org/2000/01/rdf-schema#');
 
 const TERMS = $rdf.Namespace('http://purl.org/dc/terms/');
+const XML = $rdf.Namespace('http://www.w3.org/2001/XMLSchema#');
 const STAT = $rdf.Namespace('http://www.w3.org/ns/posix/stat#');
 const ELEMENTS = $rdf.Namespace('http://purl.org/dc/elements/1.1/');
 const SIOC = $rdf.Namespace('http://rdfs.org/sioc/ns#');
@@ -14,19 +15,25 @@ const PIM = $rdf.Namespace('http://www.w3.org/ns/pim/space#');
 const SOLID = $rdf.Namespace('http://www.w3.org/ns/solid/terms#');
 const PLAIN = $rdf.Namespace('http://www.w3.org/ns/iana/media-types/text/plain#');
 
-class Node {
+export class Node {
   protected store: any;
+  protected fetcher: any;
   protected id: string;
-  constructor (store: any, id: string) {
-    this.store = store;
+  protected baseId: string;
+  constructor (id: string, store?: any, fetcher?: any) {
+    this.store = store || $rdf.graph()
+    this.fetcher = fetcher || new $rdf.Fetcher(this.store);
     this.id = id;
+    this.baseId = id.split('#')[0]
   }
-  public async load () {
-    await new $rdf.Fetcher(this.store)(this.id.split('#')[0]);
+  public async loadId (id: string) {
+    await this.fetcher.load(id);
+  }
+  public async load (force?: boolean) {
+    await this.fetcher.load(this.baseId, { force: force || false });
   }
   protected node (namespace: any, prop: any) {
     return this.store.any($rdf.sym(this.id), namespace(prop));
-
   }
   protected value (namespace: any, prop: any) {
     const node = this.store.any($rdf.sym(this.id), namespace(prop));
@@ -104,15 +111,39 @@ export class Folder extends Node {
   get contents () {
     return this.values(LDP, 'contains');
   }
-}
-
-export class Data extends Node {
-  get author () { return this.value(ELEMENTS, 'author'); }
-  get created () { return this.value(ELEMENTS, 'created'); }
-  get modified () { return this.value(ELEMENTS, 'modified'); }
-  get content () { return this.value(SIOC, 'content'); }
+  get size () {
+    return this.value(STAT, 'size');
+  }
+  get mtime () {
+    return this.value(STAT, 'mtime');
+  }
+  get subfolders () {
+    console.log('getting folders', this.id, this.doc)
+    return this.doc.filter((d: string) =>
+      /^https:.+\/$/.test(d)
+    ).map((d: string) => 
+      this.id + '/' + d.split('/').slice(-2, -1)
+    );
+  }
 }
 
 export class Simple extends Node {
   get content () { return this.value(SIOC, 'content'); }
 }
+
+export class MediaContent extends Node {
+  constructor (id: string, store?: any, fetcher?: any) {
+    super(id + '#media', store, fetcher)
+  }
+  get b64 () { return this.value(ELEMENTS, 'd'); }
+}
+
+
+export class Content extends Node {
+  constructor (id: string, store?: any, fetcher?: any) {
+    super(id + '#content', store, fetcher)
+  }
+  get text () { return this.value(ELEMENTS, 'd'); }
+  get media () { return this.value(ELEMENTS, 'm'); }
+}
+

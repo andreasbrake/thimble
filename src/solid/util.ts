@@ -1,10 +1,9 @@
 import solid from '@/solid/solid';
 import $rdf from '@/solid/rdflib';
 
-import { Folder, Data } from '@/solid/types';
+import { Folder } from '@/solid/types';
 import { verifyStructure } from './registerSetup';
 
-let verified = false;
 let store = $rdf.graph();
 let fetcher = new $rdf.Fetcher(store);
 let updater = new $rdf.UpdateManager(store);
@@ -15,7 +14,6 @@ solid.auth.currentSession().then((session: any) => {
   fetcher = new $rdf.Fetcher(store);
   updater = new $rdf.UpdateManager(store);
   verifyStructure();
-  verified = true;
   host = session.webId.split('/profile')[0];
 });
 
@@ -42,7 +40,7 @@ export function gethost () {
 export async function getFolder (path: string) {
   const id = `${path}`;
   await fetcher.load($rdf.sym(id));
-  return new Folder(store, id);
+  return new Folder(id);
 }
 export async function addSubFolder (path: string, subFolder: string) {
   const key = `${path}${path[path.length - 1] !== '/' ? '/' : ''}${subFolder}/.dummy`;
@@ -52,7 +50,16 @@ export async function addSubFolder (path: string, subFolder: string) {
 }
 export async function getDocument (path: string, document: string) {
   const key = `${path}${path[path.length - 1] !== '/' ? '/' : ''}${document}`;
-  await store.fetcher.webOperation('GET', key);
+  try {
+    await store.fetcher.webOperation('GET', key);
+  } catch(err) {
+    if (err.response) {
+      throw err.response
+    } else {
+      throw err
+    }
+  }
+  
 }
 export async function addDocument (path: string, document: string) {
   const key = `${path}${path[path.length - 1] !== '/' ? '/' : ''}${document}`;
@@ -61,41 +68,4 @@ export async function addDocument (path: string, document: string) {
 export async function removeDocument (path: string, document: string) {
   const key = `${path}${path[path.length - 1] !== '/' ? '/' : ''}${document}`;
   await store.fetcher.webOperation('DELETE', key);
-}
-
-
-export async function createData (path: string, name: string, content: string) {
-  const key = `${path}${path[path.length - 1] !== '/' ? '/' : ''}${name}.ttl`;
-
-  const now = new Date().toISOString();
-  const ttl = `
-    @prefix : <#>.
-    @prefix n0: <http://purl.org/dc/elements/1.1/>.
-    @prefix c: </profile/card#>.
-    @prefix XML: <http://www.w3.org/2001/XMLSchema#>.
-    @prefix n: <http://rdfs.org/sioc/ns#>.
-
-    :this
-        n0:author c:me;
-        n0:created "${now}"^^XML:dateTime;
-        n0:modified "${now}"^^XML:dateTime.
-    :content
-        n:content "${content.replace(/"/g, '\\"')}".
-  `;
-  await fetcher.webOperation(
-    'PUT',
-    key,
-    {
-      contentType: 'text/turtle',
-      data: ttl,
-    },
-  );
-}
-export async function updateData (path: string, name: string, content: string) {
-  const key = `${path}${path[path.length - 1] !== '/' ? '/' : ''}${name}.ttl`;
-  await fetcher.webOperation(
-    'DELETE',
-    key,
-  );
-  await createData(path, name, content);
 }

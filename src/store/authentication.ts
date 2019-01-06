@@ -1,13 +1,14 @@
 import solidAPI from '@/solid';
 import { registerKeys, purgeKeys } from '@/solid/registerSetup';
 import * as crypto from '@/util/crypto';
+import { Profile } from '@/solid/types';
 
 interface IState {
   status: string;
   offline: boolean;
   message: string;
   solidAuth: any;
-  profile: any;
+  profile: Profile | null;
 }
 interface IAction {
   commit: any;
@@ -37,6 +38,7 @@ const initialState = (commit: any): IState => {
 // getters
 const getters = {
   readOnlyMode: (state: IState) => state.offline,
+  profile: (state: IState) => state.profile,
   loginStatus: (state: IState) => state.status,
   solidAuth: (state: IState) => state.solidAuth,
   loginMessage: (state: IState) => {
@@ -70,6 +72,8 @@ const actions = {
       solidAPI.logout().then(() => {
         localStorage.removeItem('solid-auth-client');
         commit('authentication/logout');
+      }).then(() => {
+        return solidAPI.login()
       });
     } else if (!keys) {
       console.log(' [!] AUTH ERROR: Account incorrectly configured');

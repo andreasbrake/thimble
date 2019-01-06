@@ -44,7 +44,7 @@ async function getProfile () {
   }
   const webid = session.webId;
   await util.getFetcher().load(webid);
-  return new Profile(util.getStore(), webid);
+  return new Profile(webid, util.getStore());
 }
 
 async function getKeys (strip: boolean) {
@@ -84,8 +84,8 @@ async function getKeys (strip: boolean) {
     console.log('error', err.status, err.statusText, err.response);
   }
 
-  const privkey = new Simple(localStore, privateKeyId);
-  const pubkey = new Simple(localStore, publicKeyId);
+  const privkey = new Simple(privateKeyId, localStore);
+  const pubkey = new Simple(publicKeyId, localStore);
 
   // console.log('got remote keys', strip, privkey.content, pubkey.content)
 
